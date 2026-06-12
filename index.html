@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sky Builder - Bangun Website Jualanmu Lebih Cepat</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        skyblue: '#0F62FE',
+                        skycyan: '#00E5FF',
+                        skydark: '#0A0E17',
+                        skypurple: '#8B5CF6',
+                        skylight: '#F8FAFC',
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'slide-up': 'slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'fade-in': 'fadeIn 0.4s ease forwards',
+                    },
+                    keyframes: {
+                        float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-15px)' } },
+                        slideUp: { '0%': { transform: 'translateY(24px)', opacity: '0' }, '100%': { transform: 'translateY(0)', opacity: '1' } },
+                        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- React -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #F8FAFC; color: #0A0E17; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
+        .bg-grid-pattern { background-image: linear-gradient(rgba(15,98,254,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(15,98,254,.05) 1px,transparent 1px); background-size: 40px 40px; }
+        .text-gradient { background-clip:text; -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-image:linear-gradient(90deg,#0F62FE,#8B5CF6,#00E5FF); }
+        .glass-panel { background:rgba(255,255,255,.85); backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,.6); }
+        .no-scrollbar::-webkit-scrollbar { display:none; } .no-scrollbar { -ms-overflow-style:none; scrollbar-width:none; }
+        .custom-scrollbar::-webkit-scrollbar { width:5px; } .custom-scrollbar::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:4px; }
+        input:-webkit-autofill { -webkit-box-shadow:0 0 0 30px white inset !important; }
+        .auth-input { width:100%; padding:12px 16px; border:1.5px solid #e2e8f0; border-radius:12px; font-size:14px; outline:none; transition:border-color .2s, box-shadow .2s; background:#fafafa; }
+        .auth-input:focus { border-color:#0F62FE; box-shadow:0 0 0 3px rgba(15,98,254,.12); background:#fff; }
+        .auth-input.error { border-color:#ef4444; }
+        .safe-pb { padding-bottom: env(safe-area-inset-bottom, 20px); }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinner { width:20px; height:20px; border:2.5px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; }
+        .spinner-dark { border-color:rgba(15,98,254,.2); border-top-color:#0F62FE; }
+    </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback, createContext, useContext } = React;
+
+// ============================================================
+// SUPABASE CONFIG — ganti dengan project kamu
+// ============================================================
+const SUPABASE_URL = 'https://eqtwqyrclvvaefabgrfe.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_hSnKZT1OEAykkia_9jKrUw_-5PIcAGu';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ============================================================
+// TOAST CONTEXT
+// ============================================================
+const ToastContext = createContext();
+const useToast = () => useContext(ToastContext);
+
+const ToastProvider = ({ children }) => {
+    const [toasts, setToasts] = useState([]);
+    const add = (message, type = 'success') => {
+        const id = Date.now();
+        setToasts(p => [...p, { id, message, type }]);
+        setTimeout(() => setToasts(p => p.filter(t => t.id !== id)), 3500);
+    };
+    return (
+        <ToastContext.Provider value={{ addToast: add }}>
+            {children}
+            <div className="fixed bottom-24 md:bottom-6 right-4 z-[200] flex flex-col gap-2 pointer-events-none max-w-sm">
+                {toasts.map(t => (
+                    <div key={t.id} className={`glass-panel px-4 py-3 rounded-xl shadow-xl flex items-center gap-3 animate-slide-up border-l-4 ${
+                        t.type==='success' ? 'border-green-500' : t.type==='error' ? 'border-red-500' : 'border-skyblue'
+                    }`}>
+                        <i className={`ph text-xl ${t.type==='success'?'ph-check-circle text-green-500':t.type==='error'?'ph-warning-circle text-red-500':'ph-info text-skyblue'}`}></i>
+                        <span className="font-medium text-sm text-gray-800">{t.message}</span>
+                    </div>
+                ))}
+            </div>
+        </ToastContext.Provider>
+    );
+};
+
+// ============================================================
+// AUTH CONTEXT
+// ============================================================
+const AuthContext = createContext();
+const useAuth = () => useContext(AuthContext);
+
+const AuthProvider = ({ children }) => {
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        // Cek session saat ini
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setUser(session?.user ?? null);
+            setLoading(false);
+        });
+
+        // Listen perubahan auth
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setUser(session?.user ?? null);
+            setLoading(false);
+        });
+
+        return () => subscription.unsubscribe();
+    }, []);
+
+    const signOut = async () => {
+        await supabase.auth.signOut();
+        setUser(null);
+    };
+
+    return (
+        <AuthContext.Provider value={{ user, loading, signOut, supabase }}>
+            {children}
+        </AuthContext.Provider>
+    );
+};
+
+// ============================================================
+// REUSABLE UI
+// ============================================================
+const Button = ({ children, variant='primary', className='', onClick, disabled=false, loading=false, type='button' }) => {
+    const base = "px-5 py-3 font-semibold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed";
+    const v = {
+        primary: "bg-skyblue text-white hover:bg-blue-700 shadow-lg shadow-blue-500/25 active:scale-95",
+        secondary: "bg-white text-skydark border border-gray-200 hover:border-skyblue hover:text-skyblue shadow-sm",
+        outline: "bg-transparent border-2 border-gray-200 text-gray-700 hover:border-skyblue hover:text-skyblue",
+        ghost: "bg-transparent text-gray-500 hover:text-skyblue hover:bg-blue-50",
+        gradient: "bg-gradient-to-r from-skyblue to-skypurple text-white shadow-lg hover:opacity-90 active:scale-95",
+        danger: "bg-red-50 text-red-600 hover:bg-red-100 border border-red-100",
+    };
+    return (
+        <button type={type} onClick={onClick} disabled={disabled || loading} className={`${base} ${v[variant]} ${className}`}>
+            {loading ? <div className={`spinner ${variant!=='primary'&&variant!=='gradient'?'spinner-dark':''}`}></div> : children}
+        </button>
+    );
+};
+
+const Card = ({ children, className='', noPadding=false }) => (
+    <div className={`bg-white rounded-2xl border border-gray-100 shadow-sm ${noPadding?'':'p-6'} ${className}`}>{children}</div>
+);
+
+const Badge = ({ children, type='neutral', className='' }) => {
+    const t = { success:'bg-green-100 text-green-700 border-green-200', warning:'bg-yellow-100 text-yellow-700 border-yellow-200', danger:'bg-red-100 text-red-700 border-red-200', primary:'bg-blue-100 text-blue-700 border-blue-200', neutral:'bg-gray-100 text-gray-600 border-gray-200' };
+    return <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${t[type]} ${className}`}>{children}</span>;
+};
+
+const Divider = ({ label }) => (
+    <div className="flex items-center gap-3 my-2">
+        <div className="flex-1 h-px bg-gray-200"></div>
+        {label && <span className="text-xs text-gray-400 font-medium">{label}</span>}
+        <div className="flex-1 h-px bg-gray-200"></div>
+    </div>
+);
+
+// ============================================================
+// AUTH PAGE — Login / Register / Magic Link
+// ============================================================
+const AuthPage = () => {
+    const { addToast } = useToast();
+    const [mode, setMode] = useState('login'); // 'login' | 'register' | 'magic' | 'check-email'
+    const [form, setForm] = useState({ email: '', password: '', name: '' });
+    const [errors, setErrors] = useState({});
+    const [loading, setLoading] = useState(false);
+
+    const validate = () => {
+        const e = {};
+        if (!form.email) e.email = 'Email wajib diisi';
+        else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = 'Format email tidak valid';
+        if (mode !== 'magic') {
+            if (!form.password) e.password = 'Password wajib diisi';
+            else if (form.password.length < 6) e.password = 'Password minimal 6 karakter';
+        }
+        if (mode === 'register' && !form.name) e.name = 'Nama wajib diisi';
+        setErrors(e);
+        return Object.keys(e).length === 0;
+    };
+
+    const handleSubmit = async () => {
+        if (!validate()) return;
+        setLoading(true);
+        try {
+            if (mode === 'magic') {
+                const { error } = await supabase.auth.signInWithOtp({ email: form.email, options: { emailRedirectTo: window.location.href } });
+                if (error) throw error;
+                setMode('check-email');
+            } else if (mode === 'register') {
+                const { error } = await supabase.auth.signUp({
+                    email: form.email, password: form.password,
+                    options: { data: { full_name: form.name }, emailRedirectTo: window.location.href }
+                });
+                if (error) throw error;
+                setMode('check-email');
+                addToast('Cek email kamu untuk konfirmasi!', 'info');
+            } else {
+                const { error } = await supabase.auth.signInWithPassword({ email: form.email, password: form.password });
+                if (error) throw error;
+                addToast('Selamat datang kembali! 👋', 'success');
+            }
+        } catch (err) {
+            addToast(err.message === 'Invalid login credentials' ? 'Email atau password salah' : err.message, 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+        });
+    };
+
+    const update = (field, val) => {
+        setForm(f => ({ ...f, [field]: val }));
+        if (errors[field]) setErrors(e => ({ ...e, [field]: null }));
+    };
+
+    if (mode === 'check-email') return (
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+            <Card className="max-w-md w-full text-center animate-slide-up p-10">
+                <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <i className="ph ph-envelope-simple-open text-4xl text-skyblue"></i>
+                </div>
+                <h2 className="text-2xl font-black mb-3">Cek Email Kamu</h2>
+                <p className="text-gray-500 mb-2">Kami kirim link ke</p>
+                <p className="font-bold text-skydark mb-6">{form.email}</p>
+                <p className="text-sm text-gray-400 mb-6">Klik link di email untuk masuk. Cek folder spam jika tidak muncul.</p>
+                <Button variant="ghost" onClick={() => setMode('login')} className="w-full">
+                    <i className="ph ph-arrow-left"></i> Kembali ke Login
+                </Button>
+            </Card>
+        </div>
+    );
+
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex flex-col">
+            {/* Navbar minimal */}
+            <nav className="px-6 py-5 flex items-center justify-between max-w-7xl mx-auto w-full">
+                <div className="flex items-center gap-2 font-black text-xl tracking-tight text-skydark">
+                    <i className="ph ph-squares-four text-skyblue text-2xl"></i> Sky Builder
+                </div>
+                <a href="#" className="text-sm font-semibold text-gray-500 hover:text-skyblue transition-colors">Kembali ke Beranda</a>
+            </nav>
+
+            {/* Auth card */}
+            <div className="flex-1 flex items-center justify-center p-4">
+                <div className="w-full max-w-md animate-slide-up">
+                    <Card className="shadow-xl border-gray-100 p-8">
+                        {/* Header */}
+                        <div className="text-center mb-8">
+                            <h1 className="text-2xl font-black text-skydark mb-1">
+                                {mode==='login' ? 'Masuk ke Sky Builder' : mode==='register' ? 'Buat Akun Gratis' : 'Masuk via Magic Link'}
+                            </h1>
+                            <p className="text-sm text-gray-500">
+                                {mode==='login' ? 'Belum punya akun?' : 'Sudah punya akun?'}
+                                <button onClick={() => { setMode(mode==='login'?'register':'login'); setErrors({}); }} className="ml-1 text-skyblue font-bold hover:underline">
+                                    {mode==='login' ? 'Daftar gratis' : 'Masuk di sini'}
+                                </button>
+                            </p>
+                        </div>
+
+
+
+                        {/* Form */}
+                        <div className="space-y-4 mt-4">
+                            {mode === 'register' && (
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1.5">Nama Lengkap</label>
+                                    <input className={`auth-input ${errors.name?'error':''}`} placeholder="Nama kamu" value={form.name} onChange={e => update('name', e.target.value)} />
+                                    {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+                                </div>
+                            )}
+
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1.5">Email</label>
+                                <input className={`auth-input ${errors.email?'error':''}`} type="email" placeholder="email@kamu.com" value={form.email} onChange={e => update('email', e.target.value)} onKeyDown={e => e.key==='Enter'&&handleSubmit()} />
+                                {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+                            </div>
+
+                            {mode !== 'magic' && (
+                                <div>
+                                    <div className="flex justify-between items-center mb-1.5">
+                                        <label className="text-sm font-bold text-gray-700">Password</label>
+                                        {mode==='login' && <button onClick={() => { setMode('magic'); setErrors({}); }} className="text-xs text-skyblue font-semibold hover:underline">Lupa password?</button>}
+                                    </div>
+                                    <input className={`auth-input ${errors.password?'error':''}`} type="password" placeholder="Minimal 6 karakter" value={form.password} onChange={e => update('password', e.target.value)} onKeyDown={e => e.key==='Enter'&&handleSubmit()} />
+                                    {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
+                                </div>
+                            )}
+
+                            {mode === 'magic' && (
+                                <div className="bg-blue-50 rounded-xl p-3 flex gap-2">
+                                    <i className="ph ph-magic-wand text-skyblue text-lg mt-0.5 flex-shrink-0"></i>
+                                    <p className="text-xs text-blue-700">Kami kirim link ajaib ke email kamu. Klik link itu untuk langsung masuk — tanpa password!</p>
+                                </div>
+                            )}
+
+                            <Button variant="primary" className="w-full py-3.5 text-base" onClick={handleSubmit} loading={loading}>
+                                {mode==='login' ? <><i className="ph ph-sign-in"></i> Masuk</> : mode==='register' ? <><i className="ph ph-user-plus"></i> Buat Akun</> : <><i className="ph ph-paper-plane-tilt"></i> Kirim Magic Link</>}
+                            </Button>
+
+                            {mode !== 'magic' && (
+                                <button onClick={() => { setMode('magic'); setErrors({}); }} className="w-full text-center text-sm text-gray-500 hover:text-skyblue font-medium transition-colors py-1">
+                                    <i className="ph ph-magic-wand mr-1"></i> Masuk via Magic Link
+                                </button>
+                            )}
+                            {mode === 'magic' && (
+                                <button onClick={() => { setMode('login'); setErrors({}); }} className="w-full text-center text-sm text-gray-500 hover:text-skyblue font-medium transition-colors py-1">
+                                    <i className="ph ph-arrow-left mr-1"></i> Kembali ke login biasa
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Footer note */}
+                        <p className="text-center text-xs text-gray-400 mt-6">
+                            Dengan mendaftar, kamu setuju dengan <a href="#" className="underline hover:text-gray-600">Syarat Layanan</a> dan <a href="#" className="underline hover:text-gray-600">Kebijakan Privasi</a>.
+                        </p>
+                    </Card>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ============================================================
+// DASHBOARD LAYOUT
+// ============================================================
+const Sidebar = ({ active, navigate, user }) => {
+    const { signOut } = useAuth();
+    const { addToast } = useToast();
+    const navItems = [
+        { id: 'dashboard', icon: 'ph-squares-four', label: 'Dashboard' },
+        { id: 'pages', icon: 'ph-layout', label: 'Halaman Saya' },
+        { id: 'builder', icon: 'ph-pencil-ruler', label: 'Buat Halaman' },
+        { id: 'catalog', icon: 'ph-storefront', label: 'Sky Catalog' },
+        { id: 'analytics', icon: 'ph-chart-line-up', label: 'Analytics' },
+        { id: 'settings', icon: 'ph-gear', label: 'Pengaturan' },
+    ];
+    const handleSignOut = async () => { await signOut(); addToast('Sampai jumpa! 👋', 'info'); };
+    const avatar = user?.user_metadata?.full_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U';
+
+    return (
+        <aside className="hidden md:flex flex-col fixed left-0 top-0 h-screen w-64 bg-white border-r border-gray-100 z-40">
+            {/* Logo */}
+            <div className="px-6 h-16 flex items-center border-b border-gray-100 flex-shrink-0">
+                <div className="flex items-center gap-2 font-black text-xl text-skydark tracking-tight">
+                    <i className="ph ph-squares-four text-skyblue text-2xl"></i> Sky Builder
+                </div>
+            </div>
+
+            {/* Nav */}
+            <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto custom-scrollbar">
+                {navItems.map(item => (
+                    <button key={item.id} onClick={() => navigate(item.id)} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
+                        active===item.id ? 'bg-blue-50 text-skyblue' : 'text-gray-500 hover:text-skydark hover:bg-gray-50'
+                    }`}>
+                        <i className={`ph ${item.icon} text-lg`}></i>
+                        {item.label}
+                        {item.id==='builder' && <span className="ml-auto bg-skyblue text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">BARU</span>}
+                    </button>
+                ))}
+            </nav>
+
+            {/* User */}
+            <div className="p-4 border-t border-gray-100">
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 mb-2">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-skyblue to-skypurple flex items-center justify-center text-white font-bold text-sm flex-shrink-0">{avatar}</div>
+                    <div className="min-w-0">
+                        <p className="text-sm font-bold text-skydark truncate">{user?.user_metadata?.full_name || 'Pengguna'}</p>
+                        <p className="text-xs text-gray-400 truncate">{user?.email}</p>
+                    </div>
+                </div>
+                <button onClick={handleSignOut} className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-500 hover:bg-red-50 rounded-xl font-semibold transition-colors">
+                    <i className="ph ph-sign-out"></i> Keluar
+                </button>
+            </div>
+        </aside>
+    );
+};
+
+const TopBar = ({ title, navigate }) => (
+    <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-xl border-b border-gray-100 h-16 flex items-center px-6 gap-4 md:ml-64">
+        <h1 className="font-black text-lg text-skydark flex-1">{title}</h1>
+        <button onClick={() => navigate('builder')} className="flex items-center gap-2 bg-skyblue text-white text-sm font-bold px-4 py-2 rounded-xl hover:bg-blue-700 shadow-md shadow-blue-500/25 transition-all active:scale-95">
+            <i className="ph ph-plus"></i> <span className="hidden sm:inline">Buat Halaman</span>
+        </button>
+    </header>
+);
+
+const BottomNav = ({ active, navigate }) => {
+    const items = [
+        { id:'dashboard', icon:'ph-squares-four', label:'Home' },
+        { id:'pages', icon:'ph-layout', label:'Halaman' },
+        { id:'builder', icon:'ph-plus-circle', label:'Buat', special:true },
+        { id:'analytics', icon:'ph-chart-line-up', label:'Analitik' },
+        { id:'settings', icon:'ph-gear', label:'Akun' },
+    ];
+    return (
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-100 z-50 safe-pb">
+            <div className="flex items-center justify-around px-2 pt-2 pb-1">
+                {items.map(item => (
+                    <button key={item.id} onClick={() => navigate(item.id)} className={`flex flex-col items-center gap-1 px-3 py-1 rounded-xl transition-all ${active===item.id?'text-skyblue':'text-gray-400'}`}>
+                        {item.special
+                            ? <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg shadow-blue-500/30 -mt-5 transition-all ${active===item.id?'bg-blue-700 scale-110':'bg-skyblue'}`}><i className="ph ph-plus text-white text-2xl"></i></div>
+                            : <i className={`ph ${item.icon} text-2xl`}></i>
+                        }
+                        {!item.special && <span className="text-[10px] font-bold">{item.label}</span>}
+                    </button>
+                ))}
+            </div>
+        </nav>
+    );
+};
+
+// ============================================================
+// DASHBOARD HOME
+// ============================================================
+const DashboardHome = ({ pages, navigate }) => {
+    const { user } = useAuth();
+    const name = user?.user_metadata?.full_name?.split(' ')[0] || 'Kamu';
+    const published = pages.filter(p => p.status === 'published').length;
+    const totalViews = pages.reduce((s, p) => s + (p.views||0), 0);
+
+    return (
+        <div className="p-6 max-w-5xl mx-auto space-y-6 animate-fade-in">
+            {/* Greeting */}
+            <div className="bg-gradient-to-r from-skyblue to-skypurple rounded-2xl p-6 text-white relative overflow-hidden">
+                <div className="absolute right-0 top-0 w-40 h-full opacity-10">
+                    <i className="ph ph-squares-four text-[160px] -mt-4 -mr-6 block"></i>
+                </div>
+                <p className="text-blue-200 text-sm font-semibold mb-1">Selamat datang,</p>
+                <h2 className="text-2xl font-black mb-4">{name}! 👋</h2>
+                <Button variant="secondary" className="text-sm py-2 px-5 text-skydark" onClick={() => navigate('builder')}>
+                    <i className="ph ph-plus"></i> Buat Halaman Baru
+                </Button>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-4">
+                {[
+                    { label:'Total Halaman', value:pages.length, icon:'ph-layout', color:'blue' },
+                    { label:'Dipublikasikan', value:published, icon:'ph-globe', color:'green' },
+                    { label:'Total Views', value:totalViews.toLocaleString('id'), icon:'ph-eye', color:'purple' },
+                ].map((s,i) => (
+                    <Card key={i} className="text-center">
+                        <div className={`w-10 h-10 rounded-xl bg-${s.color}-50 flex items-center justify-center mx-auto mb-3`}>
+                            <i className={`ph ${s.icon} text-xl text-${s.color}-500`}></i>
+                        </div>
+                        <p className="text-2xl font-black text-skydark">{s.value}</p>
+                        <p className="text-xs text-gray-500 font-medium mt-1">{s.label}</p>
+                    </Card>
+                ))}
+            </div>
+
+            {/* Recent pages */}
+            <div>
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-bold text-lg">Halaman Terbaru</h3>
+                    <button onClick={() => navigate('pages')} className="text-sm text-skyblue font-semibold hover:underline">Lihat semua</button>
+                </div>
+                {pages.length === 0 ? (
+                    <Card className="text-center py-12 border-2 border-dashed border-gray-200 bg-gray-50">
+                        <i className="ph ph-layout text-4xl text-gray-300 mb-3 block"></i>
+                        <p className="text-gray-500 font-semibold mb-1">Belum ada halaman</p>
+                        <p className="text-gray-400 text-sm mb-4">Buat halaman pertamamu sekarang!</p>
+                        <Button onClick={() => navigate('builder')} className="mx-auto text-sm py-2"><i className="ph ph-plus"></i> Mulai Buat</Button>
+                    </Card>
+                ) : (
+                    <div className="space-y-3">
+                        {pages.slice(0,3).map(p => (
+                            <Card key={p.id} className="flex items-center gap-4 py-4">
+                                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+                                    <i className="ph ph-layout text-skyblue text-lg"></i>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-bold text-sm truncate">{p.name}</p>
+                                    <p className="text-xs text-gray-400 truncate">{p.url || 'skybuilder.id/'+p.slug}</p>
+                                </div>
+                                <Badge type={p.status==='published'?'success':'neutral'}>{p.status==='published'?'Live':'Draft'}</Badge>
+                            </Card>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+// ============================================================
+// PAGES VIEW
+// ============================================================
+const PagesView = ({ pages, onDelete, onPublish, navigate }) => {
+    const { addToast } = useToast();
+    const copyLink = (url) => { navigator.clipboard.writeText(url); addToast('Link disalin!'); };
+
+    if (pages.length === 0) return (
+        <div className="p-6 flex flex-col items-center justify-center min-h-[60vh] text-center animate-fade-in">
+            <i className="ph ph-layout text-6xl text-gray-200 mb-4 block"></i>
+            <h3 className="text-xl font-black text-gray-700 mb-2">Belum ada halaman</h3>
+            <p className="text-gray-400 mb-6 max-w-sm">Buat halaman pertamamu — landing page, link bio, atau katalog produk.</p>
+            <Button onClick={() => navigate('builder')}><i className="ph ph-plus"></i> Buat Halaman Pertama</Button>
+        </div>
+    );
+
+    return (
+        <div className="p-6 max-w-5xl mx-auto animate-fade-in">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {pages.map(p => (
+                    <Card key={p.id} noPadding className="flex flex-col overflow-hidden hover:shadow-md transition-shadow">
+                        {/* Preview thumbnail */}
+                        <div className="h-32 bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center border-b border-gray-100">
+                            <i className="ph ph-layout text-4xl text-gray-200"></i>
+                        </div>
+                        <div className="p-5 flex-1 flex flex-col">
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                                <h3 className="font-black text-sm leading-tight">{p.name}</h3>
+                                <Badge type={p.status==='published'?'success':'neutral'} className="flex-shrink-0">{p.status==='published'?'Live':'Draft'}</Badge>
+                            </div>
+                            <p className="text-xs text-gray-400 mb-4">{new Date(p.created_at).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'})}</p>
+
+                            {p.status==='published' && (
+                                <div className="bg-blue-50 rounded-lg px-3 py-2 flex items-center justify-between mb-4">
+                                    <span className="text-xs text-skyblue font-medium truncate">skybuilder.id/{p.slug}</span>
+                                    <button onClick={() => copyLink(`https://skybuilder.id/${p.slug}`)} className="ml-2 text-skyblue hover:text-blue-800 flex-shrink-0"><i className="ph ph-copy text-sm"></i></button>
+                                </div>
+                            )}
+
+                            <div className="mt-auto flex gap-2">
+                                {p.status!=='published' && (
+                                    <Button variant="primary" className="flex-1 py-2 text-xs" onClick={() => onPublish(p.id)}>
+                                        <i className="ph ph-rocket-launch"></i> Publish
+                                    </Button>
+                                )}
+                                <Button variant="secondary" className="flex-1 py-2 text-xs">
+                                    <i className="ph ph-pencil"></i> Edit
+                                </Button>
+                                <button onClick={() => onDelete(p.id)} className="w-9 h-9 rounded-xl bg-gray-50 hover:bg-red-50 hover:text-red-500 flex items-center justify-center text-gray-400 transition-colors border border-gray-100">
+                                    <i className="ph ph-trash text-sm"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </Card>
+                ))}
+
+                {/* Add new card */}
+                <button onClick={() => navigate('builder')} className="border-2 border-dashed border-gray-200 rounded-2xl h-64 flex flex-col items-center justify-center gap-3 text-gray-400 hover:border-skyblue hover:text-skyblue transition-all group">
+                    <div className="w-14 h-14 rounded-full bg-gray-100 group-hover:bg-blue-50 flex items-center justify-center transition-colors">
+                        <i className="ph ph-plus text-2xl"></i>
+                    </div>
+                    <span className="text-sm font-bold">Buat Halaman Baru</span>
+                </button>
+            </div>
+        </div>
+    );
+};
+
+// ============================================================
+// BUILDER WIZARD (6 Steps)
+// ============================================================
+const BuilderWizard = ({ onComplete, userId }) => {
+    const { addToast } = useToast();
+    const [step, setStep] = useState(1);
+    const [saving, setSaving] = useState(false);
+    const [data, setData] = useState({
+        goal: '', name: '', desc: '', template: null,
+        color: '#0F62FE', whatsapp: '', slug: ''
+    });
+
+    const goals = ['Link Bio','Landing Produk','Katalog Jasa','Produk Digital','Portofolio','Percetakan / UMKM','Sekolah / Komunitas','Undangan Digital'];
+    const templates = [
+        { id:1, name:'Creator Link Pro', category:'Link Bio', color:'#0F62FE' },
+        { id:2, name:'UMKM Store Lite', category:'Landing Produk', color:'#8B5CF6' },
+        { id:3, name:'Digital Product Launch', category:'Produk Digital', color:'#00E5FF' },
+        { id:4, name:'Print Shop Landing', category:'Percetakan', color:'#0A0E17' },
+        { id:5, name:'School Profile', category:'Sekolah', color:'#2563EB' },
+        { id:6, name:'Portfolio Clean', category:'Portofolio', color:'#F8FAFC' },
+    ];
+    const colors = ['#0F62FE','#8B5CF6','#EC4899','#10B981','#F59E0B','#EF4444','#0A0E17','#1E40AF'];
+
+    const set = (key, val) => setData(d => ({ ...d, [key]: val }));
+
+    const toSlug = (str) => str.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'');
+
+    const next = () => {
+        if (step===1 && !data.goal) return addToast('Pilih tujuan halaman dulu', 'error');
+        if (step===2 && !data.name.trim()) return addToast('Nama brand wajib diisi', 'error');
+        if (step===3 && !data.template) return addToast('Pilih template dulu', 'error');
+        if (step===5 && !data.slug.trim()) return addToast('URL slug wajib diisi', 'error');
+        setStep(s => Math.min(6, s+1));
+    };
+    const prev = () => setStep(s => Math.max(1, s-1));
+
+    const handleFinish = async () => {
+        setSaving(true);
+        try {
+            const { error } = await supabase.from('pages').insert({
+                user_id: userId,
+                name: data.name,
+                slug: data.slug || toSlug(data.name),
+                goal: data.goal,
+                description: data.desc,
+                template_id: data.template,
+                color: data.color,
+                whatsapp: data.whatsapp,
+                status: 'draft',
+                views: 0,
+            });
+            if (error) throw error;
+            addToast('Halaman berhasil dibuat! 🎉', 'success');
+            onComplete();
+        } catch (err) {
+            addToast('Gagal menyimpan: ' + err.message, 'error');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const STEPS = ['Tujuan','Identitas','Template','Warna','URL','Selesai'];
+
+    // Live Preview
+    const Preview = () => (
+        <div className="w-[220px] h-[440px] bg-skydark rounded-[28px] border-[7px] border-skydark shadow-2xl relative overflow-hidden flex-shrink-0 hidden lg:block">
+            <div className="absolute top-0 w-full h-4 z-20 flex justify-center"><div className="w-1/3 h-3.5 bg-skydark rounded-b-xl"></div></div>
+            <div className="w-full h-full bg-white overflow-hidden">
+                <div className="h-28 flex flex-col items-center justify-center text-white text-center px-4 relative" style={{backgroundColor: data.color}}>
+                    <div className="w-12 h-12 bg-white rounded-full border-2 border-white shadow flex items-center justify-center text-skydark font-black text-lg mb-1">
+                        {data.name ? data.name.charAt(0).toUpperCase() : 'B'}
+                    </div>
+                    <p className="font-bold text-xs leading-tight">{data.name || 'Nama Brand'}</p>
+                    <p className="text-[9px] opacity-80 truncate w-full text-center px-2">{data.desc || 'Deskripsi bisnis kamu'}</p>
+                </div>
+                <div className="p-3 space-y-2">
+                    {['Produk Kami','Hubungi Kami','Lokasi'].map((l,i) => (
+                        <div key={i} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border border-gray-100">
+                            <span className="text-[9px] font-semibold text-gray-700">{l}</span>
+                            <i className="ph ph-caret-right text-gray-300 text-xs"></i>
+                        </div>
+                    ))}
+                </div>
+                {data.whatsapp && (
+                    <div className="absolute bottom-3 left-3 right-3 p-2 rounded-xl text-white text-[9px] font-bold flex items-center justify-center gap-1" style={{backgroundColor:'#25D366'}}>
+                        <i className="ph ph-whatsapp-logo text-sm"></i> Chat WhatsApp
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+
+    return (
+        <div className="min-h-[calc(100vh-4rem)] flex flex-col animate-fade-in">
+            {/* Step indicator */}
+            <div className="bg-white border-b border-gray-100 px-6 py-4 flex-shrink-0">
+                <div className="max-w-3xl mx-auto">
+                    <div className="flex items-center gap-1 mb-3 overflow-x-auto no-scrollbar">
+                        {STEPS.map((s,i) => (
+                            <React.Fragment key={i}>
+                                <div className={`flex items-center gap-1.5 flex-shrink-0 ${i<step?'text-skyblue':i===step-1?'text-skyblue':'text-gray-300'}`}>
+                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black border-2 transition-all ${i<step-1?'bg-skyblue border-skyblue text-white':i===step-1?'border-skyblue text-skyblue bg-white':'border-gray-200 text-gray-300'}`}>
+                                        {i<step-1 ? <i className="ph ph-check text-xs"></i> : i+1}
+                                    </div>
+                                    <span className="text-xs font-bold hidden sm:inline">{s}</span>
+                                </div>
+                                {i<STEPS.length-1 && <div className={`flex-1 h-0.5 mx-1 min-w-[12px] transition-colors ${i<step-1?'bg-skyblue':'bg-gray-100'}`}></div>}
+                            </React.Fragment>
+                        ))}
+                    </div>
+                    <div className="flex justify-between items-center">
+                        <p className="text-xs text-gray-400 font-medium">Langkah {step} dari {STEPS.length}</p>
+                        <p className="text-xs font-bold text-skyblue">{STEPS[step-1]}</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto">
+                <div className="max-w-3xl mx-auto px-6 py-8 flex gap-8 items-start">
+                    <div className="flex-1 min-w-0">
+
+                        {/* Step 1: Goal */}
+                        {step===1 && (
+                            <div>
+                                <h2 className="text-xl font-black mb-2">Buat untuk apa?</h2>
+                                <p className="text-gray-500 text-sm mb-6">Pilih tujuan utama halamanmu.</p>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {goals.map(g => (
+                                        <button key={g} onClick={() => set('goal',g)} className={`p-4 rounded-xl border-2 text-left font-semibold text-sm transition-all ${data.goal===g?'border-skyblue bg-blue-50 text-skyblue':'border-gray-200 hover:border-gray-300 text-gray-700'}`}>
+                                            {g}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Step 2: Identity */}
+                        {step===2 && (
+                            <div className="space-y-5">
+                                <div>
+                                    <h2 className="text-xl font-black mb-2">Identitas Brand</h2>
+                                    <p className="text-gray-500 text-sm mb-6">Informasi dasar yang akan muncul di halamanmu.</p>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1.5">Nama Brand / Bisnis *</label>
+                                    <input className="auth-input" placeholder="Contoh: Abunawas Percetakan" value={data.name} onChange={e => { set('name',e.target.value); set('slug', toSlug(e.target.value)); }} />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1.5">Deskripsi Singkat</label>
+                                    <textarea className="auth-input resize-none h-24" placeholder="Ceritakan bisnis kamu dalam 1-2 kalimat..." value={data.desc} onChange={e => set('desc',e.target.value)} />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1.5">Nomor WhatsApp (opsional)</label>
+                                    <div className="flex">
+                                        <span className="auth-input w-auto px-3 rounded-r-none border-r-0 bg-gray-100 text-gray-500 font-medium text-sm flex items-center">+62</span>
+                                        <input className="auth-input rounded-l-none flex-1" placeholder="812xxxxxxxx" value={data.whatsapp} onChange={e => set('whatsapp',e.target.value)} />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Step 3: Template */}
+                        {step===3 && (
+                            <div>
+                                <h2 className="text-xl font-black mb-2">Pilih Template</h2>
+                                <p className="text-gray-500 text-sm mb-6">Kamu bisa ubah desain kapan saja setelah publish.</p>
+                                <div className="grid grid-cols-2 gap-4">
+                                    {templates.map(t => (
+                                        <button key={t.id} onClick={() => set('template',t.id)} className={`rounded-2xl border-2 overflow-hidden text-left transition-all ${data.template===t.id?'border-skyblue shadow-lg shadow-blue-500/20':'border-gray-200 hover:border-gray-300'}`}>
+                                            <div className="h-28 flex items-center justify-center" style={{backgroundColor:t.color+'22'}}>
+                                                <i className="ph ph-layout text-3xl" style={{color:t.color}}></i>
+                                            </div>
+                                            <div className="p-3">
+                                                <p className="font-bold text-xs text-skydark">{t.name}</p>
+                                                <p className="text-[10px] text-gray-400">{t.category}</p>
+                                            </div>
+                                            {data.template===t.id && <div className="bg-skyblue text-white text-center text-[10px] font-bold py-1">✓ Dipilih</div>}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Step 4: Color */}
+                        {step===4 && (
+                            <div>
+                                <h2 className="text-xl font-black mb-2">Warna Brand</h2>
+                                <p className="text-gray-500 text-sm mb-6">Pilih warna utama yang mencerminkan brandmu.</p>
+                                <div className="flex flex-wrap gap-4 mb-6">
+                                    {colors.map(c => (
+                                        <button key={c} onClick={() => set('color',c)} className={`w-12 h-12 rounded-xl border-4 transition-all ${data.color===c?'border-skydark scale-110 shadow-lg':'border-transparent hover:scale-105'}`} style={{backgroundColor:c}} />
+                                    ))}
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1.5">Atau masukkan kode warna</label>
+                                    <div className="flex gap-3 items-center">
+                                        <div className="w-10 h-10 rounded-xl border border-gray-200 flex-shrink-0" style={{backgroundColor:data.color}}></div>
+                                        <input className="auth-input" placeholder="#0F62FE" value={data.color} onChange={e => set('color',e.target.value)} />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Step 5: URL/Slug */}
+                        {step===5 && (
+                            <div>
+                                <h2 className="text-xl font-black mb-2">URL Halamanmu</h2>
+                                <p className="text-gray-500 text-sm mb-6">Ini alamat yang kamu bagikan ke pelanggan.</p>
+                                <div className="bg-gray-50 rounded-xl p-4 mb-4 font-mono text-sm text-gray-600 break-all">
+                                    skybuilder.id/<span className="text-skyblue font-bold">{data.slug || 'nama-brandmu'}</span>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1.5">Slug URL *</label>
+                                    <input className="auth-input" placeholder="nama-brandmu" value={data.slug} onChange={e => set('slug', toSlug(e.target.value))} />
+                                    <p className="text-xs text-gray-400 mt-1.5">Hanya huruf kecil, angka, dan tanda "-"</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Step 6: Done */}
+                        {step===6 && (
+                            <div className="text-center py-4">
+                                <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                                    <i className="ph ph-check-circle text-4xl text-green-500"></i>
+                                </div>
+                                <h2 className="text-2xl font-black mb-3">Siap Diluncurkan! 🚀</h2>
+                                <p className="text-gray-500 mb-2">Halaman <strong>{data.name}</strong> siap disimpan sebagai draft.</p>
+                                <p className="text-sm text-gray-400 mb-8">Kamu bisa edit konten lebih lanjut setelah menyimpan, lalu publish kapan saja.</p>
+                                <div className="bg-gray-50 rounded-xl p-4 text-left space-y-2 mb-8 text-sm">
+                                    {[['Tujuan',data.goal],['Nama',data.name],['Template',templates.find(t=>t.id===data.template)?.name||'-'],['URL','skybuilder.id/'+data.slug]].map(([k,v]) => (
+                                        <div key={k} className="flex gap-3"><span className="text-gray-400 w-20 flex-shrink-0">{k}</span><span className="font-semibold text-skydark">{v}</span></div>
+                                    ))}
+                                </div>
+                                <Button variant="gradient" className="w-full py-4 text-base" onClick={handleFinish} loading={saving}>
+                                    <i className="ph ph-floppy-disk"></i> Simpan & Buka Dashboard
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Live Preview - desktop only */}
+                    {step >= 2 && step <= 5 && <Preview />}
+                </div>
+            </div>
+
+            {/* Footer nav */}
+            {step < 6 && (
+                <div className="bg-white border-t border-gray-100 px-6 py-4 flex justify-between items-center flex-shrink-0">
+                    <Button variant="ghost" onClick={prev} disabled={step===1}>
+                        <i className="ph ph-arrow-left"></i> Kembali
+                    </Button>
+                    <Button variant="primary" onClick={next}>
+                        Lanjut <i className="ph ph-arrow-right"></i>
+                    </Button>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// ============================================================
+// SETTINGS VIEW
+// ============================================================
+const SettingsView = () => {
+    const { user, signOut } = useAuth();
+    const { addToast } = useToast();
+    const [name, setName] = useState(user?.user_metadata?.full_name || '');
+    const [saving, setSaving] = useState(false);
+
+    const handleSave = async () => {
+        setSaving(true);
+        const { error } = await supabase.auth.updateUser({ data: { full_name: name } });
+        setSaving(false);
+        if (error) addToast('Gagal menyimpan: '+error.message, 'error');
+        else addToast('Profil berhasil diperbarui!', 'success');
+    };
+
+    return (
+        <div className="p-6 max-w-xl mx-auto animate-fade-in">
+            <Card className="space-y-6">
+                <div className="flex items-center gap-4 pb-5 border-b border-gray-100">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-skyblue to-skypurple flex items-center justify-center text-white text-2xl font-black">
+                        {name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                        <p className="font-black text-lg">{name || 'Pengguna'}</p>
+                        <p className="text-sm text-gray-400">{user?.email}</p>
+                        <Badge type="primary" className="mt-1">Paket Gratis</Badge>
+                    </div>
+                </div>
+
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1.5">Nama Lengkap</label>
+                        <input className="auth-input" value={name} onChange={e => setName(e.target.value)} placeholder="Nama lengkap kamu" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1.5">Email</label>
+                        <input className="auth-input" value={user?.email} disabled style={{opacity:.6,cursor:'not-allowed'}} />
+                        <p className="text-xs text-gray-400 mt-1">Email tidak bisa diubah</p>
+                    </div>
+                    <Button variant="primary" onClick={handleSave} loading={saving} className="w-full">
+                        <i className="ph ph-floppy-disk"></i> Simpan Perubahan
+                    </Button>
+                </div>
+
+                <div className="pt-4 border-t border-gray-100">
+                    <h4 className="font-bold text-sm text-gray-700 mb-3">Zona Bahaya</h4>
+                    <Button variant="danger" onClick={signOut} className="w-full">
+                        <i className="ph ph-sign-out"></i> Keluar dari Akun
+                    </Button>
+                </div>
+            </Card>
+        </div>
+    );
+};
+
+// ============================================================
+// PLACEHOLDER VIEWS
+// ============================================================
+const PlaceholderView = ({ icon, title, desc }) => (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-8 animate-fade-in">
+        <i className={`ph ${icon} text-6xl text-gray-200 mb-4 block`}></i>
+        <h3 className="text-xl font-black text-gray-600 mb-2">{title}</h3>
+        <p className="text-gray-400 max-w-sm">{desc}</p>
+        <Badge type="primary" className="mt-4">Segera Hadir</Badge>
+    </div>
+);
+
+// ============================================================
+// DASHBOARD WRAPPER (dengan data dari Supabase)
+// ============================================================
+const Dashboard = () => {
+    const { user, signOut } = useAuth();
+    const { addToast } = useToast();
+    const [view, setView] = useState('dashboard');
+    const [pages, setPages] = useState([]);
+    const [loadingPages, setLoadingPages] = useState(true);
+
+    const TITLES = { dashboard:'Dashboard', pages:'Halaman Saya', builder:'Buat Halaman Baru', catalog:'Sky Catalog', analytics:'Analytics', settings:'Pengaturan' };
+
+    // Fetch pages dari Supabase
+    const fetchPages = useCallback(async () => {
+        if (!user) return;
+        setLoadingPages(true);
+        const { data, error } = await supabase.from('pages').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
+        if (!error) setPages(data || []);
+        setLoadingPages(false);
+    }, [user]);
+
+    useEffect(() => { fetchPages(); }, [fetchPages]);
+
+    const handleDelete = async (id) => {
+        if (!confirm('Hapus halaman ini?')) return;
+        const { error } = await supabase.from('pages').delete().eq('id', id);
+        if (error) addToast('Gagal menghapus: '+error.message, 'error');
+        else { addToast('Halaman dihapus', 'success'); fetchPages(); }
+    };
+
+    const handlePublish = async (id) => {
+        const { error } = await supabase.from('pages').update({ status: 'published' }).eq('id', id);
+        if (error) addToast('Gagal publish: '+error.message, 'error');
+        else { addToast('Halaman berhasil dipublish! 🚀', 'success'); fetchPages(); }
+    };
+
+    const navigate = (v) => { setView(v); window.scrollTo(0,0); };
+
+    return (
+        <div className="flex bg-[#f1f5f9] min-h-screen">
+            <Sidebar active={view} navigate={navigate} user={user} />
+
+            <div className="flex-1 md:ml-64 flex flex-col min-h-screen">
+                <TopBar title={TITLES[view]||'Dashboard'} navigate={navigate} />
+
+                <main className="flex-1">
+                    {loadingPages && view !== 'builder' ? (
+                        <div className="flex items-center justify-center min-h-[60vh]">
+                            <div className="flex flex-col items-center gap-3">
+                                <div className="spinner spinner-dark"></div>
+                                <p className="text-sm text-gray-400 font-medium">Memuat data...</p>
+                            </div>
+                        </div>
+                    ) : (
+                        <>
+                            {view==='dashboard' && <DashboardHome pages={pages} navigate={navigate} />}
+                            {view==='pages' && <PagesView pages={pages} onDelete={handleDelete} onPublish={handlePublish} navigate={navigate} />}
+                            {view==='builder' && <BuilderWizard userId={user?.id} onComplete={() => { fetchPages(); navigate('pages'); }} />}
+                            {view==='catalog' && <PlaceholderView icon="ph-storefront" title="Sky Catalog" desc="Fitur katalog produk dengan integrasi WhatsApp sedang disiapkan." />}
+                            {view==='analytics' && <PlaceholderView icon="ph-chart-line-up" title="Analytics" desc="Dashboard analitik pengunjung dan klik sedang disiapkan." />}
+                            {view==='settings' && <SettingsView />}
+                        </>
+                    )}
+                </main>
+
+                {view !== 'builder' && <BottomNav active={view} navigate={navigate} />}
+            </div>
+        </div>
+    );
+};
+
+// ============================================================
+// ROOT APP
+// ============================================================
+const App = () => {
+    const { user, loading } = useAuth();
+
+    if (loading) return (
+        <div className="min-h-screen flex items-center justify-center bg-white">
+            <div className="flex flex-col items-center gap-4">
+                <div className="flex items-center gap-2 font-black text-2xl text-skydark">
+                    <i className="ph ph-squares-four text-skyblue text-3xl"></i> Sky Builder
+                </div>
+                <div className="spinner spinner-dark"></div>
+            </div>
+        </div>
+    );
+
+    return user ? <Dashboard /> : <AuthPage />;
+};
+
+const Root = () => (
+    <AuthProvider>
+        <ToastProvider>
+            <App />
+        </ToastProvider>
+    </AuthProvider>
+);
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<Root />);
+</script>
+</body>
+</html>
